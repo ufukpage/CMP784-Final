@@ -7,8 +7,10 @@ url = {
     'r80f64': 'https://cv.snu.ac.kr/research/EDSR/models/mdsr-4a78bedf.pt'
 }
 
+
 def make_model(args, parent=False):
     return MDSR(args)
+
 
 class MDSR(nn.Module):
     def __init__(self, args, conv=common.default_conv):

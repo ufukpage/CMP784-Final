@@ -6,6 +6,12 @@ def set_template(args):
         args.epochs = 200
         args.decay = '100'
 
+    if args.template.find('RNAN') >= 0:
+        args.model = 'RNAN'
+        # args.n_resgroups = 16
+        args.n_feats = 64
+        args.chop = True
+
     if args.template.find('EDSR_paper') >= 0:
         args.model = 'EDSR'
         args.n_resblocks = 32
@@ -44,17 +50,4 @@ def set_template(args):
         args.n_feats = 64
         args.chop = True
 
-    if args.template.find('RNAN') >= 0:
-        args.model = 'RNAN'
-        args.n_resgroups = 10
-        args.n_resblocks = 20
-        args.n_feats = 64
-        args.chop = True
-
-    if args.template.find('VDSR') >= 0:
-        args.model = 'VDSR'
-        args.n_resblocks = 20
-        args.n_feats = 64
-        args.patch_size = 41
-        args.lr = 1e-1
 

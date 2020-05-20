@@ -1,14 +1,13 @@
-import os
-import math
 from decimal import Decimal
 
 import utility
-
+import gc
 import torch
 import torch.nn.utils as utils
 from tqdm import tqdm
 
-class Trainer():
+
+class Trainer:
     def __init__(self, args, loader, my_model, my_loss, ckp):
         self.args = args
         self.scale = args.scale
@@ -26,6 +25,8 @@ class Trainer():
         self.error_last = 1e8
 
     def train(self):
+        # self.args.cpu = False
+
         self.loss.step()
         epoch = self.optimizer.get_last_epoch() + 1
         lr = self.optimizer.get_lr()
@@ -72,22 +73,38 @@ class Trainer():
         self.optimizer.schedule()
 
     def test(self):
+
+        # self.args.cpu = True
+
         torch.set_grad_enabled(False)
 
         epoch = self.optimizer.get_last_epoch()
+
         self.ckp.write_log('\nEvaluation:')
         self.ckp.add_log(
             torch.zeros(1, len(self.loader_test), len(self.scale))
         )
+        self.model.zero_grad()
         self.model.eval()
 
         timer_test = utility.timer()
-        if self.args.save_results: self.ckp.begin_background()
+        if self.args.save_results:
+            self.ckp.begin_background()
+
+        # with torch.no_grad():
         for idx_data, d in enumerate(self.loader_test):
             for idx_scale, scale in enumerate(self.scale):
+
                 d.dataset.set_scale(idx_scale)
+
                 for lr, hr, filename in tqdm(d, ncols=80):
+                    torch.cuda.empty_cache()
+                    gc.collect()
+
                     lr, hr = self.prepare(lr, hr)
+
+                    # self.model.device = torch.device('cpu')
+                    # self.model = self.model.cpu()
                     sr = self.model(lr, idx_scale)
                     sr = utility.quantize(sr, self.args.rgb_range)
 
@@ -130,8 +147,10 @@ class Trainer():
 
     def prepare(self, *args):
         device = torch.device('cpu' if self.args.cpu else 'cuda')
+
         def _prepare(tensor):
-            if self.args.precision == 'half': tensor = tensor.half()
+            if self.args.precision == 'half':
+                tensor = tensor.half()
             return tensor.to(device)
 
         return [_prepare(a) for a in args]

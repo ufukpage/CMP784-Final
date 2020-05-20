@@ -5,31 +5,23 @@ import skimage.color as sc
 
 import torch
 
-def get_patch(*args, patch_size=96, scale=2, multi=False, input_large=False):
-    ih, iw = args[0].shape[:2]
 
-    if not input_large:
-        p = scale if multi else 1
-        tp = p * patch_size
-        ip = tp // scale
-    else:
-        tp = patch_size
-        ip = patch_size
+def get_patch(img_in, img_tar, patch_size, scale, multi_scale=False):
+    ih, iw = img_in.shape[:2]
+
+    p = scale if multi_scale else 1
+    tp = p * patch_size
+    ip = tp // scale
 
     ix = random.randrange(0, iw - ip + 1)
     iy = random.randrange(0, ih - ip + 1)
+    tx, ty = scale * ix, scale * iy
 
-    if not input_large:
-        tx, ty = scale * ix, scale * iy
-    else:
-        tx, ty = ix, iy
+    img_in = img_in[iy:iy + ip, ix:ix + ip, :]
+    img_tar = img_tar[ty:ty + tp, tx:tx + tp, :]
 
-    ret = [
-        args[0][iy:iy + ip, ix:ix + ip, :],
-        *[a[ty:ty + tp, tx:tx + tp, :] for a in args[1:]]
-    ]
+    return img_in, img_tar
 
-    return ret
 
 def set_channel(*args, n_channels=3):
     def _set_channel(img):
@@ -46,7 +38,9 @@ def set_channel(*args, n_channels=3):
 
     return [_set_channel(a) for a in args]
 
+
 def np2Tensor(*args, rgb_range=255):
+
     def _np2Tensor(img):
         np_transpose = np.ascontiguousarray(img.transpose((2, 0, 1)))
         tensor = torch.from_numpy(np_transpose).float()
@@ -55,6 +49,7 @@ def np2Tensor(*args, rgb_range=255):
         return tensor
 
     return [_np2Tensor(a) for a in args]
+
 
 def augment(*args, hflip=True, rot=True):
     hflip = hflip and random.random() < 0.5

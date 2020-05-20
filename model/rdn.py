@@ -8,6 +8,7 @@ import torch.nn as nn
 def make_model(args, parent=False):
     return RDN(args)
 
+
 class RDB_Conv(nn.Module):
     def __init__(self, inChannels, growRate, kSize=3):
         super(RDB_Conv, self).__init__()
@@ -21,6 +22,7 @@ class RDB_Conv(nn.Module):
     def forward(self, x):
         out = self.conv(x)
         return torch.cat((x, out), 1)
+
 
 class RDB(nn.Module):
     def __init__(self, growRate0, growRate, nConvLayers, kSize=3):
@@ -39,6 +41,7 @@ class RDB(nn.Module):
 
     def forward(self, x):
         return self.LFF(self.convs(x)) + x
+
 
 class RDN(nn.Module):
     def __init__(self, args):

@@ -9,7 +9,7 @@ parser.add_argument('--template', default='.',
                     help='You can set various templates in option.py')
 
 # Hardware specifications
-parser.add_argument('--n_threads', type=int, default=4,                 # RNAN icin 6 olmuyor, default 6 ama
+parser.add_argument('--n_threads', type=int, default=3,                 # RNAN icin 6 olmuyor, default 6 ama
                     help='number of threads for data loading')
 parser.add_argument('--cpu', action='store_true',
                     help='use cpu only')
@@ -21,7 +21,7 @@ parser.add_argument('--seed', type=int, default=1,
 # Data specifications
 parser.add_argument('--dir_data', type=str, default='dataset',
                     help='dataset directory')
-parser.add_argument('--dir_demo', type=str, default='../test',
+parser.add_argument('--dir_demo', type=str, default='test',
                     help='demo image directory')
 parser.add_argument('--data_train', type=str, default='DIV2K',
                     help='train dataset name')
@@ -29,7 +29,7 @@ parser.add_argument('--data_test', type=str, default='DIV2K',
                     help='test dataset name')
 parser.add_argument('--data_range', type=str, default='1-800/801-810',
                     help='train/test data range')
-parser.add_argument('--ext', type=str, default='sep_reset', # ilk calistirdiginda sep_reset, sonrakilerde sep yap
+parser.add_argument('--ext', type=str, default='sep', # ilk calistirdiginda sep_reset, sonrakilerde sep yap
                     help='dataset file extension')
 parser.add_argument('--scale', type=str, default='4',
                     help='super resolution scale')
@@ -39,7 +39,7 @@ parser.add_argument('--rgb_range', type=int, default=255,
                     help='maximum value of RGB')
 parser.add_argument('--n_colors', type=int, default=3,
                     help='number of color channels to use')
-parser.add_argument('--chop', action='store_true',
+parser.add_argument('--chop', action='store_true',    # memoryi kurtarmak icin store_true olursa 111gb istiyor, olmazsa 8 gb istiyor
                     help='enable memory-efficient forward')
 parser.add_argument('--no_augment', action='store_true',
                     help='do not use data augmentation')
@@ -81,7 +81,7 @@ parser.add_argument('--RDNkSize', type=int, default=3,
 parser.add_argument('--RDNconfig', type=str, default='B',
                     help='parameters config of RDN. (Use in RDN)')
 
-# Option for Residual channel attention network (RCAN)
+# Option for Residual channel attention network (RCAN/RNAN)
 parser.add_argument('--n_resgroups', type=int, default=10,
                     help='number of residual groups')
 parser.add_argument('--reduction', type=int, default=16,

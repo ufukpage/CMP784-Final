@@ -14,11 +14,10 @@ class Model(nn.Module):
 
         self.scale = args.scale
         self.idx_scale = 0
-        self.input_large = (args.model == 'VDSR')
         self.self_ensemble = args.self_ensemble
         self.chop = args.chop
         self.precision = args.precision
-        self.cpu = args.cpu
+
         self.device = torch.device('cpu' if args.cpu else 'cuda')
         self.n_GPUs = args.n_GPUs
         self.save_models = args.save_models
@@ -103,8 +102,64 @@ class Model(nn.Module):
         if load_from:
             self.model.load_state_dict(load_from, strict=False)
 
-    def forward_chop(self, *args, shave=10, min_size=160000):
-        scale = 1 if self.input_large else self.scale[self.idx_scale]
+    def forward_chop(self, x, shave=10, min_size=30000):
+        # min_size = 160000
+        scale = self.scale[self.idx_scale]
+        n_GPUs = min(self.n_GPUs, 4)
+        b, c, h, w = x.size()
+        ###############################################
+        # adaptive shave
+        # corresponding to scaling factor of the downscaling and upscaling modules in the network
+        shave_scale = 4
+        shave_size_max = 12
+        h_half, w_half = h // 2, w // 2
+        # mod
+        mod_h, mod_w = h_half // shave_scale, w_half // shave_scale
+        # determine midsize along height and width directions
+        h_size = mod_h * shave_scale + shave_size_max
+        w_size = mod_w * shave_scale + shave_size_max
+        ###############################################
+
+        # h_half, w_half = h // 2, w // 2
+        # h_size, w_size = h_half + shave, w_half + shave
+        lr_list = [
+            x[:, :, 0:h_size, 0:w_size],
+            x[:, :, 0:h_size, (w - w_size):w],
+            x[:, :, (h - h_size):h, 0:w_size],
+            x[:, :, (h - h_size):h, (w - w_size):w]]
+
+        if w_size * h_size < min_size:
+            sr_list = []
+            for i in range(0, 4, n_GPUs):
+                lr_batch = torch.cat(lr_list[i:(i + n_GPUs)], dim=0)
+                sr_batch = self.model(lr_batch)
+                sr_list.extend(sr_batch.chunk(n_GPUs, dim=0))
+        else:
+            sr_list = [
+                self.forward_chop(patch, shave=shave, min_size=min_size) for patch in lr_list
+            ]
+
+        h, w = scale * h, scale * w
+        h_half, w_half = scale * h_half, scale * w_half
+        h_size, w_size = scale * h_size, scale * w_size
+        shave *= scale
+
+        output = x.new(b, c, h, w)
+        output[:, :, 0:h_half, 0:w_half] \
+            = sr_list[0][:, :, 0:h_half, 0:w_half]
+        output[:, :, 0:h_half, w_half:w] \
+            = sr_list[1][:, :, 0:h_half, (w_size - w + w_half):w_size]
+        output[:, :, h_half:h, 0:w_half] \
+            = sr_list[2][:, :, (h_size - h + h_half):h_size, 0:w_half]
+        output[:, :, h_half:h, w_half:w] \
+            = sr_list[3][:, :, (h_size - h + h_half):h_size, (w_size - w + w_half):w_size]
+
+        return output
+
+
+    """""
+    def forward_chop(self, *args, shave=10, min_size=30000):
+        scale = self.scale[self.idx_scale]
         n_GPUs = min(self.n_GPUs, 4)
         # height, width
         h, w = args[0].size()[-2:]
@@ -124,8 +179,16 @@ class Model(nn.Module):
         if h * w < 4 * min_size:
             for i in range(0, 4, n_GPUs):
                 x = [x_chop[i:(i + n_GPUs)] for x_chop in x_chops]
-                y = P.data_parallel(self.model, *x, range(n_GPUs))
-                if not isinstance(y, list): y = [y]
+
+                if self.device == torch.device("cpu"):
+                    y = self.model(*x)
+                else:
+                    y = P.data_parallel(self.model, *x, range(n_GPUs))
+
+
+                y = y.cuda()
+                if not isinstance(y, list):
+                    y = [y]
                 if not y_chops:
                     y_chops = [[c for c in _y.chunk(n_GPUs, dim=0)] for _y in y]
                 else:
@@ -138,7 +201,8 @@ class Model(nn.Module):
                 if not y_chops:
                     y_chops = [[_y] for _y in y]
                 else:
-                    for y_chop, _y in zip(y_chops, y): y_chop.append(_y)
+                    for y_chop, _y in zip(y_chops, y):
+                        y_chop.append(_y)
 
         h *= scale
         w *= scale
@@ -158,10 +222,11 @@ class Model(nn.Module):
             _y[..., bottom, left] = y_chop[2][..., bottom_r, left]
             _y[..., bottom, right] = y_chop[3][..., bottom_r, right_r]
 
-        if len(y) == 1: y = y[0]
+        if len(y) == 1:
+            y = y[0]
 
         return y
-
+    """""
     def forward_x8(self, *args, forward_function=None):
         def _transform(v, op):
             if self.precision != 'single': v = v.float()

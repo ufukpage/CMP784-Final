@@ -2,13 +2,10 @@ import os
 import glob
 import random
 import pickle
-
 from data import common
-
-import numpy as np
 import imageio
-import torch
 import torch.utils.data as data
+
 
 class SRData(data.Dataset):
     def __init__(self, args, name='', train=True, benchmark=False):
@@ -18,7 +15,6 @@ class SRData(data.Dataset):
         self.split = 'train' if train else 'test'
         self.do_eval = True
         self.benchmark = benchmark
-        self.input_large = (args.model == 'VDSR')
         self.scale = args.scale
         self.idx_scale = 0
         
@@ -85,7 +81,6 @@ class SRData(data.Dataset):
         self.apath = os.path.join(dir_data, self.name)
         self.dir_hr = os.path.join(self.apath, 'HR')
         self.dir_lr = os.path.join(self.apath, 'LR_bicubic')
-        if self.input_large: self.dir_lr += 'L'
         self.ext = ('.png', '.png')
 
     def _check_and_load(self, ext, img, f, verbose=True):
@@ -136,13 +131,10 @@ class SRData(data.Dataset):
         scale = self.scale[self.idx_scale]
         if self.train:
             lr, hr = common.get_patch(
-                lr, hr,
-                patch_size=self.args.patch_size,
-                scale=scale,
-                multi=(len(self.scale) > 1),
-                input_large=self.input_large
+                lr, hr, self.args.patch_size, scale, (len(self.scale) > 1),
             )
-            if not self.args.no_augment: lr, hr = common.augment(lr, hr)
+            if not self.args.no_augment:
+                lr, hr = common.augment(lr, hr)
         else:
             ih, iw = lr.shape[:2]
             hr = hr[0:ih * scale, 0:iw * scale]
@@ -150,8 +142,6 @@ class SRData(data.Dataset):
         return lr, hr
 
     def set_scale(self, idx_scale):
-        if not self.input_large:
-            self.idx_scale = idx_scale
-        else:
-            self.idx_scale = random.randint(0, len(self.scale) - 1)
+        self.idx_scale = idx_scale
+
 
