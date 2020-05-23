@@ -1,10 +1,8 @@
 import argparse
 import template
 
-parser = argparse.ArgumentParser(description='EDSR and MDSR')
+parser = argparse.ArgumentParser(description='Deep Learning Super Resolution parameters')
 
-parser.add_argument('--debug', action='store_true',
-                    help='Enables debug mode')
 parser.add_argument('--template', default='.',
                     help='You can set various templates in option.py')
 
@@ -27,7 +25,7 @@ parser.add_argument('--data_train', type=str, default='DIV2K',
                     help='train dataset name')
 parser.add_argument('--data_test', type=str, default='DIV2K',
                     help='test dataset name')
-parser.add_argument('--data_range', type=str, default='1-800/801-810',
+parser.add_argument('--data_range', type=str, default='1-800/801-810', # 801-900 olacak test yaptigimizda burasi
                     help='train/test data range')
 parser.add_argument('--ext', type=str, default='sep', # ilk calistirdiginda sep_reset, sonrakilerde sep yap
                     help='dataset file extension')
@@ -57,8 +55,6 @@ parser.add_argument('--act', type=str, default='relu',
 parser.add_argument('--pre_train', type=str, default='',
                     help='pre-trained model directory')
 
-parser.add_argument('--extend', type=str, default='.',
-                    help='pre-trained model directory')
 parser.add_argument('--n_resblocks', type=int, default=16,
                     help='number of residual blocks')
 parser.add_argument('--n_feats', type=int, default=64,

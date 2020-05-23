@@ -247,7 +247,8 @@ class Model(nn.Module):
         list_x = []
         for a in args:
             x = [a]
-            for tf in 'v', 'h', 't': x.extend([_transform(_x, tf) for _x in x])
+            for tf in 'v', 'h', 't':
+                x.extend([_transform(_x, tf) for _x in x])
 
             list_x.append(x)
 

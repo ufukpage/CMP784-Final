@@ -24,5 +24,5 @@ def main(checkpoint):
 if __name__ == '__main__':
     # torch.backends.cudnn.benchmark = True
     torch.manual_seed(args.seed)
-    checkpoint = utility.checkpoint(args)
+    checkpoint = utility.Checkpoint(args)
     main(checkpoint)

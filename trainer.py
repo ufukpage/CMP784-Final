@@ -37,7 +37,7 @@ class Trainer:
         self.loss.start_log()
         self.model.train()
 
-        timer_data, timer_model = utility.timer(), utility.timer()
+        timer_data, timer_model = utility.Timer(), utility.Timer()
         # TEMP
         self.loader_train.dataset.set_scale(0)
         for batch, (lr, hr, _,) in enumerate(self.loader_train):
@@ -87,7 +87,7 @@ class Trainer:
         self.model.zero_grad()
         self.model.eval()
 
-        timer_test = utility.timer()
+        timer_test = utility.Timer()
         if self.args.save_results:
             self.ckp.begin_background()
 

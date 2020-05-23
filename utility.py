@@ -17,7 +17,7 @@ import torch.optim as optim
 import torch.optim.lr_scheduler as lrs
 
 
-class timer():
+class Timer:
     def __init__(self):
         self.acc = 0
         self.tic()
@@ -27,7 +27,8 @@ class timer():
 
     def toc(self, restart=False):
         diff = time.time() - self.t0
-        if restart: self.t0 = time.time()
+        if restart:
+            self.t0 = time.time()
         return diff
 
     def hold(self):
@@ -43,7 +44,7 @@ class timer():
         self.acc = 0
 
 
-class checkpoint():
+class Checkpoint:
     def __init__(self, args):
         self.args = args
         self.ok = True
@@ -125,18 +126,19 @@ class checkpoint():
             plt.savefig(self.get_path('test_{}.pdf'.format(d)))
             plt.close(fig)
 
+    @staticmethod
+    def bg_target(queue):
+        while True:
+            if not queue.empty():
+                filename, tensor = queue.get()
+                if filename is None: break
+                imageio.imwrite(filename, tensor.numpy())
+
     def begin_background(self):
         self.queue = Queue()
-
-        def bg_target(queue):
-            while True:
-                if not queue.empty():
-                    filename, tensor = queue.get()
-                    if filename is None: break
-                    imageio.imwrite(filename, tensor.numpy())
         
         self.process = [
-            Process(target=bg_target, args=(self.queue,)) \
+            Process(target=self.bg_target, args=(self.queue,)) \
             for _ in range(self.n_processes)
         ]
         
