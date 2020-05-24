@@ -18,7 +18,6 @@ class TrunkBranch(nn.Module):
 
     def forward(self, x):
         tx = self.body(x)
-
         return tx
 
 
@@ -80,6 +79,10 @@ class ResAttModule(nn.Module):
                 res_scale (int): residual connection scale
             """
         super(ResAttModule, self).__init__()
+
+        Attention_prior = [common.CALayer(n_feat, reduction),
+                           common.CALayer(n_feat, reduction, pix_att=True)]
+
         RA_RB1 = [common.ResBlock(conv, n_feat, kernel_size, bias=bias, bn=bn, act=act, res_scale=res_scale)]
 
         RA_TB = [TrunkBranch(conv, n_feat, kernel_size, bias=bias, bn=bn, act=act, res_scale=res_scale)]
@@ -88,9 +91,6 @@ class ResAttModule(nn.Module):
 
         RA_tail = [common.ResBlock(conv, n_feat, kernel_size, bias=bias, bn=bn, act=act, res_scale=res_scale),
                    common.ResBlock(conv, n_feat, kernel_size, bias=bias, bn=bn, act=act, res_scale=res_scale)]
-
-        Attention_prior = [common.CALayer(n_feat, reduction),
-                          common.CALayer(n_feat, reduction, pix_att=True)]
 
         self.RA_RB1 = nn.Sequential(*RA_RB1)
         self.RA_TB = nn.Sequential(*RA_TB)
@@ -123,7 +123,7 @@ class _ResGroup(nn.Module):
 
         self.body = nn.Sequential(*modules_body)
 
-    def forward(self, x):
+    def forward(self, x): # skip connection eklenmezse 5 sn daha hizli ama daha buyuk training loss veriyor
         res = self.body(x)
         return res + x
 
