@@ -1,7 +1,7 @@
 import argparse
 import template
 
-parser = argparse.ArgumentParser(description='Deep Learning Super Resolution parameters')
+parser = argparse.ArgumentParser(description='Efficient Attentional Residual Network(EARN) Super Resolution parameters')
 
 parser.add_argument('--template', default='.',
                     help='You can set various templates in option.py')

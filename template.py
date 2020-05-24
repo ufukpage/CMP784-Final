@@ -12,6 +12,12 @@ def set_template(args):
         args.n_feats = 64
         args.chop = True
 
+    if args.template.find('EARN') >= 0:
+        args.model = 'EARN'
+        # args.n_resgroups = 10
+        args.n_feats = 64
+        args.chop = True
+
     if args.template.find('EDSR_paper') >= 0:
         args.model = 'EDSR'
         args.n_resblocks = 32

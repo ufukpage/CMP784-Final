@@ -3,7 +3,6 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from opt_einsum import contract
 
 
 def default_conv(in_channels, out_channels, kernel_size, bias=True):
@@ -36,8 +35,10 @@ class CALayer(nn.Module):
 
     def forward(self, x):
         if not self.pix_att:
-            x = self.avg_pool(x)
-        y = self.conv_att(x)
+            y = self.avg_pool(x)
+            y = self.conv_att(y)
+        else:
+            y = self.conv_att(x)
         return x * y
 
 
@@ -72,6 +73,27 @@ class ResBlock(nn.Module):
         res += x
 
         return res
+
+
+class ResBlockEfficient(nn.Module):
+    """
+    We use a similar approach to the MobileNet [16], but use group convolution instead of depthwise convolution. CARN
+    """
+    def __init__(self, conv, n_feats, kernel_size, act=nn.ReLU(True), groups=4):
+        super(ResBlockEfficient, self).__init__()
+
+        self.body = nn.Sequential(
+            nn.Conv2d(n_feats, n_feats, kernel_size, padding=(kernel_size // 2), groups=groups),
+            act,
+            nn.Conv2d(n_feats, n_feats, kernel_size, padding=(kernel_size // 2), groups=groups),
+            act,
+            nn.Conv2d(n_feats, n_feats, 1),
+        )
+
+    def forward(self, x):
+        out = self.body(x)
+        out = F.relu(out + x)
+        return out
 
 
 class Upsampler(nn.Sequential):
@@ -112,9 +134,7 @@ class NonLocalBlock2D(nn.Module):
         self.inter_channels = inter_channels
 
         self.theta = nn.Conv2d(in_channels=self.in_channels, out_channels=self.inter_channels, kernel_size=1)
-
         self.phi = nn.Conv2d(in_channels=self.in_channels, out_channels=self.inter_channels, kernel_size=1)
-
         self.g = nn.Conv2d(in_channels=self.in_channels, out_channels=self.inter_channels, kernel_size=1)
 
         self.W = nn.Conv2d(in_channels=self.inter_channels, out_channels=self.in_channels, kernel_size=1)
@@ -128,16 +148,12 @@ class NonLocalBlock2D(nn.Module):
         theta_x = theta_x.permute(0, 2, 1)
         phi_x = self.phi(x).view(batch_size, self.inter_channels, -1)
         f = torch.matmul(theta_x, phi_x)
-        # f = contract('bij,bjk->bik', theta_x, phi_x, use_blas=False, optimize=True)
         f_div_C = F.softmax(f, dim=1)
 
         g_x = self.g(x).view(batch_size, self.inter_channels, -1)
         g_x = g_x.permute(0, 2, 1)
 
         y = torch.matmul(f_div_C, g_x)
-        # y = contract('bij,bjk->bik', f_div_C, g_x, use_blas=False, optimize=True)
-        # y = f_div_C.mm(g_x)
-        # torch.einsum()
 
         y = y.permute(0, 2, 1).contiguous()
         y = y.view(batch_size, self.inter_channels, *x.size()[2:])
@@ -160,7 +176,6 @@ class TrunkBranch(nn.Module):
         tx = self.body(x)
 
         return tx
-
 
 # define mask branch
 class MaskBranchDownUp(nn.Module):

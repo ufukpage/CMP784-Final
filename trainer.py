@@ -91,10 +91,10 @@ class Trainer:
         if self.args.save_results:
             self.ckp.begin_background()
 
-        # with torch.no_grad():
+
         for idx_data, d in enumerate(self.loader_test):
             for idx_scale, scale in enumerate(self.scale):
-
+                ssim_total = 0
                 d.dataset.set_scale(idx_scale)
 
                 for lr, hr, filename in tqdm(d, ncols=80):
@@ -103,8 +103,6 @@ class Trainer:
 
                     lr, hr = self.prepare(lr, hr)
 
-                    # self.model.device = torch.device('cpu')
-                    # self.model = self.model.cpu()
                     sr = self.model(lr, idx_scale)
                     sr = utility.quantize(sr, self.args.rgb_range)
 
@@ -112,6 +110,8 @@ class Trainer:
                     self.ckp.log[-1, idx_data, idx_scale] += utility.calc_psnr(
                         sr, hr, scale, self.args.rgb_range, dataset=d
                     )
+                    ssim_total += utility.calc_ssim(sr, hr, self.args.rgb_range).item()
+
                     if self.args.save_gt:
                         save_list.extend([lr, hr])
 
@@ -127,6 +127,15 @@ class Trainer:
                         self.ckp.log[-1, idx_data, idx_scale],
                         best[0][idx_data, idx_scale],
                         best[1][idx_data, idx_scale] + 1
+                    )
+                )
+
+                ssim_val = ssim_total / len(d)
+                self.ckp.write_log(
+                    '[{} x{}]\tSSIM: {:.3f}'.format(
+                        d.dataset.name,
+                        scale,
+                        ssim_val
                     )
                 )
 

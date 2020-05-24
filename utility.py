@@ -15,6 +15,7 @@ import imageio
 import torch
 import torch.optim as optim
 import torch.optim.lr_scheduler as lrs
+from pytorch_msssim import ssim
 
 
 class Timer:
@@ -166,6 +167,10 @@ class Checkpoint:
 def quantize(img, rgb_range):
     pixel_range = 255 / rgb_range
     return img.mul(pixel_range).clamp(0, 255).round().div(pixel_range)
+
+
+def calc_ssim(sr, hr, rgb_range, size_average=True):
+    return ssim(sr, hr, data_range=rgb_range, size_average=size_average)
 
 
 def calc_psnr(sr, hr, scale, rgb_range, dataset=None):
