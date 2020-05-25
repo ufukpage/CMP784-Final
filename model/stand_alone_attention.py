@@ -190,7 +190,6 @@ class AttentionLite(nn.Module):
         self.rel_w = nn.Parameter(torch.randn(out_channels // groups // 2, 1, 1, groups, 1, kernel_size),
                                   requires_grad=True)
 
-
         self.reset_parameters()
 
     def forward(self, x):

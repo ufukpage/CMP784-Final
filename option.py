@@ -125,8 +125,6 @@ parser.add_argument('--gclip', type=float, default=0,
 # Loss specifications
 parser.add_argument('--loss', type=str, default='1*L1',
                     help='loss function configuration')
-parser.add_argument('--skip_threshold', type=float, default='1e8',
-                    help='skipping batch that has large error')
 
 # Log specifications
 parser.add_argument('--save', type=str, default='test',

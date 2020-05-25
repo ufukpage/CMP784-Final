@@ -91,7 +91,6 @@ class Trainer:
         if self.args.save_results:
             self.ckp.begin_background()
 
-
         for idx_data, d in enumerate(self.loader_test):
             for idx_scale, scale in enumerate(self.scale):
                 ssim_total = 0

@@ -69,6 +69,7 @@ class Model(nn.Module):
         for s in save_dirs:
             torch.save(self.model.state_dict(), s)
 
+    # -1 olursa en sondan, 0 olursa dowload, isim olursa best ve latest secenegi
     def load(self, apath, pre_train='', resume=-1, cpu=False):
         load_from = None
         kwargs = {}

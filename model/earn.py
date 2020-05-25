@@ -1,6 +1,6 @@
 import torch.nn as nn
 from model import common
-from model.stand_alone_attention import AttentionConv, AttentionLite, AugmentedConv
+from model.stand_alone_attention import AttentionConv, AttentionLite
 
 
 def make_model(args):
@@ -24,7 +24,10 @@ class TrunkBranch(nn.Module):
 # channel attention ve pixel attentionin yeri nerede olsun
 # define mask branch
 class MaskBranch(nn.Module):
-
+    """
+    Changelog:
+    Residual blocklar yerine CARN daki efficient residual blokklar konuldu, group convolution yapiyor ve relu kullaniyor
+    """
     def __init__(self, conv, n_feat, kernel_size, act=nn.ReLU(True), reduction=16):
         super(MaskBranch, self).__init__()
 
@@ -69,7 +72,10 @@ class MaskBranch(nn.Module):
 
 
 class ResAttModule(nn.Module):
-
+    """
+    Changelog:
+    channel attention ve pixel attention konuldu mask ve trunk brache ayrilmadan once
+    """
     def __init__(self, conv, n_feat, kernel_size, bias=True, bn=False, act=nn.ReLU(True), res_scale=1, reduction=16):
         r"""define non-local/local  module
             Args:
@@ -92,11 +98,12 @@ class ResAttModule(nn.Module):
         RA_tail = [common.ResBlock(conv, n_feat, kernel_size, bias=bias, bn=bn, act=act, res_scale=res_scale),
                    common.ResBlock(conv, n_feat, kernel_size, bias=bias, bn=bn, act=act, res_scale=res_scale)]
 
+        self.Att_tail = nn.Sequential(*Attention_prior)
         self.RA_RB1 = nn.Sequential(*RA_RB1)
         self.RA_TB = nn.Sequential(*RA_TB)
         self.RA_MB = nn.Sequential(*RA_MB)
         self.RA_tail = nn.Sequential(*RA_tail)
-        self.Att_tail = nn.Sequential(*Attention_prior)
+
 
     def forward(self, input):
         r"""define non-local/local  module
@@ -115,6 +122,12 @@ class ResAttModule(nn.Module):
 
 
 class _ResGroup(nn.Module):
+    """
+    Changelog:
+    body modulunden den convolution kaldirildi
+    skip connection eklendi
+    """
+
     def __init__(self, conv, n_feats, k_size,  bias=True, bn=False, act=nn.ReLU(True), res_scale=1):
         super(_ResGroup, self).__init__()
         modules_body = [
@@ -130,6 +143,10 @@ class _ResGroup(nn.Module):
 
 # EfficientAttentionalResidualNetworkSuperResolution
 class EARN(nn.Module):
+    """
+    Changelog:
+    Non-local attention block kaldirildi, stand olan attention eklendi
+    """
     def __init__(self, args, conv=common.default_conv):
         super(EARN, self).__init__()
         
