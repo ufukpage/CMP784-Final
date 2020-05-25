@@ -11,19 +11,55 @@ def default_conv(in_channels, out_channels, kernel_size, bias=True):
         padding=(kernel_size // 2), bias=bias)
 
 
+def mean_channels(F):
+    assert(F.dim() == 4)
+    spatial_sum = F.sum(3, keepdim=True).sum(2, keepdim=True)
+    return spatial_sum / (F.size(2) * F.size(3))
+
+
+def stdv_channels(F):
+    assert(F.dim() == 4)
+    F_mean = mean_channels(F)
+    F_variance = (F - F_mean).pow(2).sum(3, keepdim=True).sum(2, keepdim=True) / (F.size(2) * F.size(3))
+    return F_variance.pow(0.5)
+
+
+# contrast-aware channel attention module
+class CCALayer(nn.Module):
+    def __init__(self, channel, reduction=16):
+        super(CCALayer, self).__init__()
+
+        self.contrast = stdv_channels
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.conv_du = nn.Sequential(
+            nn.Conv2d(channel, channel // reduction, 1, padding=0, bias=True),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(channel // reduction, channel, 1, padding=0, bias=True),
+            nn.Sigmoid()
+        )
+
+    def forward(self, x):
+        y = self.contrast(x) + self.avg_pool(x)
+        y = self.conv_du(y)
+        return x * y
+
+
 # Channel Attention (CA) Layer
 class CALayer(nn.Module):
 
     """
     if pix_att is True then it does not use avg pooling and, it works as pixel attention.
+    if contrast_aware is True then it uses average poolung and  .
     """
-    def __init__(self, channel, reduction=16, pix_att=False):
+    def __init__(self, channel, reduction=16, contrast_aware=False, pix_att=False):
         super(CALayer, self).__init__()
 
         self.pix_att = pix_att
         # global average pooling: feature --> point
         if not pix_att:
             self.avg_pool = nn.AdaptiveAvgPool2d(1)
+            if contrast_aware:
+                self.contrast = stdv_channels
 
         # feature channel downscale and upscale --> channel weight
         self.conv_att = nn.Sequential(
