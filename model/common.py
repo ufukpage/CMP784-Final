@@ -17,49 +17,83 @@ def mean_channels(F):
     return spatial_sum / (F.size(2) * F.size(3))
 
 
-def stdv_channels(F):
-    assert(F.dim() == 4)
-    F_mean = mean_channels(F)
-    F_variance = (F - F_mean).pow(2).sum(3, keepdim=True).sum(2, keepdim=True) / (F.size(2) * F.size(3))
-    return F_variance.pow(0.5)
-
-
-# contrast-aware channel attention module
-class CCALayer(nn.Module):
+class SqueezeAndExcitationBlock(nn.Module):
     def __init__(self, channel, reduction=16):
-        super(CCALayer, self).__init__()
+        super(SqueezeAndExcitationBlock, self).__init__()
 
-        self.contrast = stdv_channels
-        self.avg_pool = nn.AdaptiveAvgPool2d(1)
-        self.conv_du = nn.Sequential(
+        self.block = nn.Sequential(
             nn.Conv2d(channel, channel // reduction, 1, padding=0, bias=True),
             nn.ReLU(inplace=True),
             nn.Conv2d(channel // reduction, channel, 1, padding=0, bias=True),
-            nn.Sigmoid()
         )
 
     def forward(self, x):
-        y = self.contrast(x) + self.avg_pool(x)
-        y = self.conv_du(y)
-        return x * y
+        return self.block(x)
 
 
-# Channel Attention (CA) Layer
+class AdaptivelyScaledCALayer(nn.Module):
+    def __init__(self, channel, reduction=16):
+        super(AdaptivelyScaledCALayer, self).__init__()
+
+        self.local_channel_descriptors = AdaptivelyScaledCALayer.channel_descriptor_layer
+
+        self.saeb_mean = SqueezeAndExcitationBlock(channel, reduction=reduction)
+        self.saeb_std = SqueezeAndExcitationBlock(channel, reduction=reduction)
+
+        self.small_descriptor_bottleneck = nn.Sequential(nn.Conv2d(2*channel, 1*channel, 1),
+                                                         nn.ReLU(inplace=True))
+
+        self.saeb_final = SqueezeAndExcitationBlock(channel, reduction=reduction)
+
+        self.gating_function = nn.Sigmoid()
+
+    @staticmethod
+    def channel_descriptor_layer(F):
+        assert (F.dim() == 4)
+        F_mean = mean_channels(F)
+        F_variance = (F - F_mean).pow(2).sum(3, keepdim=True).sum(2, keepdim=True) / (F.size(2) * F.size(3))
+        return F_variance.pow(0.5), F_mean
+
+    def forward(self, x):
+
+        std_des, mean_des = self.local_channel_descriptors(x)
+
+        # refined descriptors
+        ref_std_des = self.saeb_std(std_des)
+        ref_mean_des = self.saeb_mean(mean_des)
+
+        # descriptor fusion
+        fused_des = torch.cat((ref_std_des, ref_mean_des), 1)
+
+        # descriptor bottleneck
+        fused_des = self.small_descriptor_bottleneck(fused_des)
+
+        # final mask
+        fused_des = self.saeb_final(fused_des)
+        mask = self.gating_function(fused_des)
+
+        return x * mask
+
+
+# Channel/Pixel Based Attention (CA) Layer
 class CALayer(nn.Module):
 
     """
     if pix_att is True then it does not use avg pooling and, it works as pixel attention.
-    if contrast_aware is True then it uses average poolung and  .
+    if contrast_aware is True then it uses summation of average and sta of channel instead of average .
     """
     def __init__(self, channel, reduction=16, contrast_aware=False, pix_att=False):
         super(CALayer, self).__init__()
 
         self.pix_att = pix_att
-        # global average pooling: feature --> point
-        if not pix_att:
-            self.avg_pool = nn.AdaptiveAvgPool2d(1)
-            if contrast_aware:
-                self.contrast = stdv_channels
+        self.contrast_aware = contrast_aware
+
+        if contrast_aware:
+            self.local_descriptor = CALayer.rescaled_contrast_layer
+
+        if not pix_att and not contrast_aware:
+            # global average pooling: feature --> point
+            self.local_descriptor = nn.AdaptiveAvgPool2d(1)
 
         # feature channel downscale and upscale --> channel weight
         self.conv_att = nn.Sequential(
@@ -69,9 +103,18 @@ class CALayer(nn.Module):
             nn.Sigmoid()
         )
 
+    @staticmethod
+    def rescaled_contrast_layer(F):
+        assert (F.dim() == 4)
+        F_mean = mean_channels(F)
+        F_variance = (F - F_mean).pow(2).sum(3, keepdim=True).sum(2, keepdim=True) / (F.size(2) * F.size(3))
+        # return F_mean / F_variance.pow(0.5)
+        # return - F_mean + F_variance
+        return -F_mean / F_variance.pow(0.5) + F_variance.pow(0.5)
+
     def forward(self, x):
-        if not self.pix_att:
-            y = self.avg_pool(x)
+        if not self.pix_att or self.contrast_aware:
+            y = self.local_descriptor(x)
             y = self.conv_att(y)
         else:
             y = self.conv_att(x)

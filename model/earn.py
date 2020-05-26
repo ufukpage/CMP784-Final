@@ -74,7 +74,7 @@ class MaskBranch(nn.Module):
 class ResAttModule(nn.Module):
     """
     Changelog:
-    channel attention ve pixel attention konuldu mask ve trunk brache ayrilmadan once
+    channel attention ve pixel attention konuldu mask ve trunk branche ayrilmadan once
     """
     def __init__(self, conv, n_feat, kernel_size, bias=True, bn=False, act=nn.ReLU(True), res_scale=1, reduction=16):
         r"""define non-local/local  module
@@ -86,8 +86,8 @@ class ResAttModule(nn.Module):
             """
         super(ResAttModule, self).__init__()
 
-        Attention_prior = [common.CALayer(n_feat, reduction),
-                           common.CALayer(n_feat, reduction, pix_att=True)]
+        Attention_prior = [common.AdaptiveRescaledCALayer(n_feat, reduction)]
+        # Attention_prior = [common.CALayer(n_feat, reduction, contrast_aware=True)]
 
         RA_RB1 = [common.ResBlock(conv, n_feat, kernel_size, bias=bias, bn=bn, act=act, res_scale=res_scale)]
 
