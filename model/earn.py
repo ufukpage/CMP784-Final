@@ -86,7 +86,7 @@ class ResAttModule(nn.Module):
             """
         super(ResAttModule, self).__init__()
 
-        Attention_prior = [common.AdaptiveRescaledCALayer(n_feat, reduction)]
+        Attention_prior = [common.AdaptivelyScaledCALayer(n_feat, reduction)]
         # Attention_prior = [common.CALayer(n_feat, reduction, contrast_aware=True)]
 
         RA_RB1 = [common.ResBlock(conv, n_feat, kernel_size, bias=bias, bn=bn, act=act, res_scale=res_scale)]
