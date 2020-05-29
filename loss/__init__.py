@@ -22,7 +22,7 @@ class Loss(nn.modules.loss._Loss):
         self.loss_module = nn.ModuleList()
         for loss in args.loss.split('+'):
             weight, loss_type = loss.split('*')
-            if loss_type == 'MSE':
+            if loss_type == 'MSE':  # L2 loss
                 loss_function = nn.MSELoss()
             elif loss_type == 'L1':
                 loss_function = nn.L1Loss()
@@ -32,16 +32,26 @@ class Loss(nn.modules.loss._Loss):
                     loss_type[3:],
                     rgb_range=args.rgb_range
                 )
+            elif loss_type.find('TextureL') >= 0:
+                module = import_module('loss.vgg')
+                loss_function = getattr(module, 'VGG')(
+                    loss_type[3:],
+                    rgb_range=args.rgb_range,
+                    texture_loss=True
+                )
             elif loss_type.find('GAN') >= 0:
                 module = import_module('loss.adversarial')
                 loss_function = getattr(module, 'Adversarial')(
                     args,
                     loss_type
                 )
+            elif loss_type.find('TVLoss') >= 0:
+                module = import_module('loss.tvloss')
+                loss_function = getattr(module, 'TVLoss')()
+
             elif loss_type.find('SSIM') >= 0:
                 from pytorch_msssim import SSIM
                 loss_function = SSIM(win_size=11, win_sigma=1.5, data_range=1, size_average=True, channel=3)
-
 
             self.loss.append({
                 'type': loss_type,

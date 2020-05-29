@@ -17,6 +17,53 @@ def mean_channels(F):
     return spatial_sum / (F.size(2) * F.size(3))
 
 
+class Gaussian(nn.Module):
+    def forward(self, x):
+        return torch.exp(-torch.mul(x, x))
+
+
+def gram_matrix(y):
+    (b, ch, h, w) = y.size()
+    features = y.view(b, ch, w * h)
+    features_t = features.transpose(1, 2)
+    gram = features.bmm(features_t) / (ch * h * w)
+    return gram
+
+
+def gram_matrix_v2(x):
+    a, b, c, d = x.size()  # a=batch size(=1)
+    # b=number of feature maps
+    # (c,d)=dimensions of a f. map (N=c*d)
+
+    features = x.view(a * b, c * d)  # resise F_XL into \hat F_XL
+
+    G = torch.mm(features, features.t())  # compute the gram product
+
+    # we 'normalize' the values of the gram matrix
+    # by dividing by the number of element in each feature maps.
+    return G.div(a * b * c * d)
+
+
+class xUnit(nn.Module):
+    def __init__(self, in_channels=1, out_channels=64, kernel_size=3, skernel_size=9):
+        super(xUnit, self).__init__()
+        self.features = nn.Sequential(
+            nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, padding=((kernel_size-1)//2), bias=True))
+        self.module = nn.Sequential(
+            nn.BatchNorm2d(out_channels),
+            nn.ReLU(),
+            nn.Conv2d(out_channels, out_channels, kernel_size=skernel_size, stride=1, padding=((skernel_size-1)//2),
+                      groups=out_channels),
+            nn.BatchNorm2d(out_channels),
+            Gaussian())
+
+    def forward(self, x):
+        x1 = self.features(x)
+        x2 = self.module(x1)
+        x = torch.mul(x1, x2)
+        return x
+
+
 class SqueezeAndExcitationBlock(nn.Module):
     def __init__(self, channel, reduction=16):
         super(SqueezeAndExcitationBlock, self).__init__()
@@ -31,11 +78,22 @@ class SqueezeAndExcitationBlock(nn.Module):
         return self.block(x)
 
 
+class ChannelDescriptorLayer(nn.Module):
+    def __init__(self):
+        super(ChannelDescriptorLayer, self).__init__()
+
+    def forward(self, x):
+        spatial_sum = x.sum(3, keepdim=True).sum(2, keepdim=True)
+        x_mean = spatial_sum / (x.size(2) * x.size(3))
+        x_variance = (x - x_mean).pow(2).sum(3, keepdim=True).sum(2, keepdim=True) / (x.size(2) * x.size(3))
+        return x_variance.pow(0.5), x_mean
+
+
 class AdaptivelyScaledCALayer(nn.Module):
     def __init__(self, channel, reduction=16):
         super(AdaptivelyScaledCALayer, self).__init__()
 
-        self.local_channel_descriptors = AdaptivelyScaledCALayer.channel_descriptor_layer
+        self.local_channel_descriptors = ChannelDescriptorLayer()
 
         self.saeb_mean = SqueezeAndExcitationBlock(channel, reduction=reduction)
         self.saeb_std = SqueezeAndExcitationBlock(channel, reduction=reduction)
@@ -46,13 +104,6 @@ class AdaptivelyScaledCALayer(nn.Module):
         self.saeb_final = SqueezeAndExcitationBlock(channel, reduction=reduction)
 
         self.gating_function = nn.Sigmoid()
-
-    @staticmethod
-    def channel_descriptor_layer(F):
-        assert (F.dim() == 4)
-        F_mean = mean_channels(F)
-        F_variance = (F - F_mean).pow(2).sum(3, keepdim=True).sum(2, keepdim=True) / (F.size(2) * F.size(3))
-        return F_variance.pow(0.5), F_mean
 
     def forward(self, x):
 
@@ -255,6 +306,7 @@ class TrunkBranch(nn.Module):
         tx = self.body(x)
 
         return tx
+
 
 # define mask branch
 class MaskBranchDownUp(nn.Module):

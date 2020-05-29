@@ -1,7 +1,8 @@
 import argparse
 import template
 
-parser = argparse.ArgumentParser(description='Efficient Attentional Residual Network(EARN) Super Resolution parameters')
+parser = argparse.ArgumentParser(description='Efficient Attentional Residual Network(EARN) for '
+                                             'Super Resolution parameters')
 
 parser.add_argument('--template', default='.',
                     help='You can set various templates in option.py')
@@ -43,15 +44,13 @@ parser.add_argument('--no_augment', action='store_true',
                     help='do not use data augmentation')
 
 # Model specifications
-parser.add_argument('--model', default='RNAN',
+parser.add_argument('--model', default='EARN',
                     help='model name')
 
 parser.add_argument('--act', type=str, default='relu',
                     help='activation function')
 
-# You can train EDSR and MDSR by yourself. All scripts are
-# provided in the src/demo.sh. Note that EDSR (x3, x4) requires pre-trained EDSR (x2).
-# You can ignore this constraint by removing --pre_train <x2 model> argument.
+
 parser.add_argument('--pre_train', type=str, default='',
                     help='pre-trained model directory')
 

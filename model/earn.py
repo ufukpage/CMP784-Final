@@ -104,7 +104,6 @@ class ResAttModule(nn.Module):
         self.RA_MB = nn.Sequential(*RA_MB)
         self.RA_tail = nn.Sequential(*RA_tail)
 
-
     def forward(self, input):
         r"""define non-local/local  module
             Args:
@@ -154,8 +153,16 @@ class EARN(nn.Module):
         n_feats = args.n_feats
         kernel_size = 3
         scale = args.scale[0]
-        act = nn.ReLU(True)
-        
+
+        if args.act == "relu":
+            act = nn.ReLU(True)
+        elif args.act == "xunit":
+            act = common.xUnit(n_feats)
+        elif args.act == "lrelu":
+            act = nn.LeakyReLU()
+        elif args.act == "prelu":
+            act = nn.PReLU()
+
         # RGB mean for DIV2K 1-800
         self.sub_mean = common.MeanShift(args.rgb_range)
         
@@ -167,8 +174,7 @@ class EARN(nn.Module):
         ]
         modules_body.append(conv(n_feats, n_feats, kernel_size))
 
-        modules_tail = [common.Upsampler(conv, scale, n_feats, act=False),
-                        conv(n_feats, args.n_colors, kernel_size)]
+        modules_tail = [common.Upsampler(conv, scale, n_feats, act=act), conv(n_feats, args.n_colors, kernel_size)]
 
         self.add_mean = common.MeanShift(args.rgb_range, sign=1)
 
@@ -190,7 +196,7 @@ class EARN(nn.Module):
 
         return res_main  
 
-    def load_state_dict(self, state_dict, strict=False):
+    def load_state_dict(self, state_dict, strict=True):
         own_state = self.state_dict()
         for name, param in state_dict.items():
             if name in own_state:

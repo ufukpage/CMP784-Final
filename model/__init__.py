@@ -101,7 +101,7 @@ class Model(nn.Module):
             )
 
         if load_from:
-            self.model.load_state_dict(load_from, strict=False)
+            self.model.load_state_dict(load_from, strict=True)
 
     def forward_chop(self, x, shave=10, min_size=15000): # 30000
         # min_size = 160000
