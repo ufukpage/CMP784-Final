@@ -39,12 +39,17 @@ def set_channel(*args, n_channels=3):
     return [_set_channel(a) for a in args]
 
 
-def np2Tensor(*args, rgb_range=255):
+def np2Tensor(*args, rgb_range=255, use_lab=False):
 
     def _np2Tensor(img):
+        img = np.array(img)
+        if use_lab:
+            img = sc.rgb2lab(img) # turn lab space
         np_transpose = np.ascontiguousarray(img.transpose((2, 0, 1)))
         tensor = torch.from_numpy(np_transpose).float()
-        tensor.mul_(rgb_range / 255)
+
+        if not use_lab:
+            tensor.mul_(rgb_range / 255)
 
         return tensor
 

@@ -51,7 +51,8 @@ class Loss(nn.modules.loss._Loss):
 
             elif loss_type.find('SSIM') >= 0:
                 from pytorch_msssim import SSIM
-                loss_function = SSIM(win_size=11, win_sigma=1.5, data_range=1, size_average=True, channel=3)
+                loss_function = SSIM(win_size=7, win_sigma=1, data_range=args.rgb_range,
+                                     size_average=True, channel=3)
 
             self.loss.append({
                 'type': loss_type,
@@ -66,7 +67,7 @@ class Loss(nn.modules.loss._Loss):
 
         for l in self.loss:
             if l['function'] is not None:
-                print('{:.3f} * {}'.format(l['weight'], l['type']))
+                print('{:.6f} * {}'.format(l['weight'], l['type']))
                 self.loss_module.append(l['function'])
 
         self.log = torch.Tensor()

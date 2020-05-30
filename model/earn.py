@@ -86,7 +86,11 @@ class ResAttModule(nn.Module):
             """
         super(ResAttModule, self).__init__()
 
-        Attention_prior = [common.AdaptivelyScaledCALayer(n_feat, reduction)]
+        RA_RBPrev = [common.ResBlock(conv, n_feat, kernel_size, bias=bias, bn=bn, act=act, res_scale=res_scale)
+                     , common.ResBlock(conv, n_feat, kernel_size, bias=bias, bn=bn, act=act, res_scale=res_scale)
+                     ]
+
+        ASCA = [common.AdaptivelyScaledCALayer(n_feat, reduction)]
         # Attention_prior = [common.CALayer(n_feat, reduction, contrast_aware=True)]
 
         RA_RB1 = [common.ResBlock(conv, n_feat, kernel_size, bias=bias, bn=bn, act=act, res_scale=res_scale)]
@@ -95,25 +99,30 @@ class ResAttModule(nn.Module):
 
         RA_MB = [MaskBranch(conv, n_feat, kernel_size, act=act)]
 
-        RA_tail = [common.ResBlock(conv, n_feat, kernel_size, bias=bias, bn=bn, act=act, res_scale=res_scale),
-                   common.ResBlock(conv, n_feat, kernel_size, bias=bias, bn=bn, act=act, res_scale=res_scale)]
+        RA_tail = [common.ResBlock(conv, n_feat, kernel_size, bias=bias, bn=bn, act=act, res_scale=res_scale)
+                   , common.ResBlock(conv, n_feat, kernel_size, bias=bias, bn=bn, act=act, res_scale=res_scale)
+                   ]
 
-        self.Att_tail = nn.Sequential(*Attention_prior)
+        self.RA_RBPrev = nn.Sequential(*RA_RBPrev)
+        self.ASCA = nn.Sequential(*ASCA)
         self.RA_RB1 = nn.Sequential(*RA_RB1)
         self.RA_TB = nn.Sequential(*RA_TB)
         self.RA_MB = nn.Sequential(*RA_MB)
         self.RA_tail = nn.Sequential(*RA_tail)
 
-    def forward(self, input):
+    def forward(self, x):
         r"""define non-local/local  module
             Args:
                 input (Tensor): input tensor
             """
-        Prior_Attention = self.Att_tail(input)
-        RA_RB1_x = self.RA_RB1(Prior_Attention)
+        RA_RBPrev = self.RA_RBPrev(x)
+        ASCA = self.ASCA(RA_RBPrev)
+
+        RA_RB1_x = self.RA_RB1(ASCA)
         tx = self.RA_TB(RA_RB1_x)
         mx = self.RA_MB(RA_RB1_x)
         txmx = tx * mx
+
         hx = txmx + RA_RB1_x
         hx = self.RA_tail(hx)
 

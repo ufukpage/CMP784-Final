@@ -5,6 +5,7 @@ import gc
 import torch
 import torch.nn.utils as utils
 from tqdm import tqdm
+import pytorch_colors as colors
 
 
 class Trainer:
@@ -103,6 +104,12 @@ class Trainer:
                     lr, hr = self.prepare(lr, hr)
 
                     sr = self.model(lr, idx_scale)
+
+                    if self.args.use_lab:
+                        hr = colors.lab_to_rgb(hr) * self.args.rgb_range
+                        lr = colors.lab_to_rgb(lr) * self.args.rgb_range
+                        sr = colors.lab_to_rgb(sr) * self.args.rgb_range
+
                     sr = utility.quantize(sr, self.args.rgb_range)
 
                     save_list = [sr]

@@ -1,6 +1,5 @@
 import os
 import glob
-import random
 import pickle
 from data import common
 import imageio
@@ -94,7 +93,10 @@ class SRData(data.Dataset):
         lr, hr, filename = self._load_file(idx)
         pair = self.get_patch(lr, hr)
         pair = common.set_channel(*pair, n_channels=self.args.n_colors)
-        pair_t = common.np2Tensor(*pair, rgb_range=self.args.rgb_range)
+
+        pair_t = common.np2Tensor(*pair, rgb_range=self.args.rgb_range,
+                                  use_lab=self.args.use_lab
+                                  )
 
         return pair_t[0], pair_t[1], filename
 

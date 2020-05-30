@@ -137,7 +137,6 @@ class Checkpoint:
 
     def begin_background(self):
         self.queue = Queue()
-        
         self.process = [
             Process(target=self.bg_target, args=(self.queue,)) \
             for _ in range(self.n_processes)

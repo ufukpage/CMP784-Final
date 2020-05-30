@@ -81,6 +81,8 @@ class SqueezeAndExcitationBlock(nn.Module):
 class ChannelDescriptorLayer(nn.Module):
     def __init__(self):
         super(ChannelDescriptorLayer, self).__init__()
+        for p in self.parameters():
+            p.requires_grad = False
 
     def forward(self, x):
         spatial_sum = x.sum(3, keepdim=True).sum(2, keepdim=True)
