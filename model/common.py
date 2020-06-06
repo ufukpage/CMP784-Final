@@ -204,7 +204,7 @@ class ResBlock(nn.Module):
         res = self.body(x).mul(self.res_scale)
         res += x
 
-        return res
+        return F.relu(res)
 
 
 class ResBlockEfficient(nn.Module):
