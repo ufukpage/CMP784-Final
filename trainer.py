@@ -1,11 +1,15 @@
 from decimal import Decimal
-
 import utility
 import gc
 import torch
 import torch.nn.utils as utils
 from tqdm import tqdm
 import pytorch_colors as colors
+import matplotlib.pyplot as plt
+import os
+
+import matplotlib
+matplotlib.use('TkAgg')
 
 
 class Trainer:
@@ -159,6 +163,66 @@ class Trainer:
         )
 
         torch.set_grad_enabled(True)
+
+    def get_feature_maps(self):
+        model_children = self.model.model.children()
+        children = list(model_children)
+        body_block_ind = 3
+        body_children = children[3][body_block_ind].children()
+        activation_children = list(body_children)
+        #for child in body_children:
+        #    print(child)
+        asca_layer = list(activation_children[0][0].children())[1]
+        mask_layer = list(activation_children[0][0].children())[4]
+        res_blocks_after_mixed_attention = list(list(activation_children[0][0].children())[5].children())[0]
+
+        activation = {}
+
+        def get_activation(name):
+            def hook(model, input, output):
+                activation[name] = output.detach()
+            return hook
+
+        sample_index = 4
+        test_dataset_index = 0
+        feature_map_index = 4
+        layer_name_to_save = "final_attention_map"
+        res_blocks_after_mixed_attention.register_forward_hook(get_activation("final_attention_map"))
+        asca_layer.register_forward_hook(get_activation("asca_layer"))
+        mask_layer.register_forward_hook(get_activation("mask_layer"))
+
+        dataset = self.loader_test[test_dataset_index].dataset
+        lr_input, gt, filename = dataset[sample_index]
+        lr_input = lr_input.cuda()
+        lr_input.unsqueeze_(0)
+        output = self.model.model(lr_input)
+
+        act = activation[layer_name_to_save].squeeze()
+
+        size = act.size(0)
+        # size = 2
+        """"
+        fig, axarr = plt.subplots(size)
+
+        for idx in range(size):
+            plt.imshow(act[idx].cpu().numpy())
+            # plt.show()
+        """
+        save_folder = os.path.join(self.ckp.dir, "feature_maps-"+layer_name_to_save+"-"+dataset.name)
+        os.makedirs(os.path.join(save_folder), exist_ok=True)
+        for idx in range(size):
+            # plt.figure()
+            save_name = filename + "_" + str(idx)
+            save_dir = os.path.join(save_folder, save_name)
+
+            feature_act = act[idx]
+            # feature_act = torch.nn.functional.softmax(feature_act) burasi acilabilir TODO
+
+            plt.imshow(feature_act.cpu().numpy()) # TODO cmap='hot', interpolation='nearest'
+            plt.savefig(save_dir)
+            # plt.show()
+        # plt.imshow(act[feature_map_index].cpu().numpy())
+        # plt.show()
 
     def prepare(self, *args):
         device = torch.device('cpu' if self.args.cpu else 'cuda')

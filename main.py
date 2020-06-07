@@ -14,6 +14,11 @@ def main(checkpoint):
         _model = model.Model(args, checkpoint)
         _loss = loss.Loss(args, checkpoint) if not args.test_only else None
         t = Trainer(args, loader, _model, _loss, checkpoint)
+
+        if args.feature_map:
+            t.get_feature_maps()
+            return
+
         while not t.terminate():
             t.train()
             t.test()
@@ -22,7 +27,7 @@ def main(checkpoint):
 
 
 if __name__ == '__main__':
-    torch.backends.cudnn.benchmark = True
+    # torch.backends.cudnn.benchmark = True
     torch.manual_seed(args.seed)
     checkpoint = utility.Checkpoint(args)
     main(checkpoint)

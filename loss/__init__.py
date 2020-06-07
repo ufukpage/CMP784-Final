@@ -51,11 +51,10 @@ class Loss(nn.modules.loss._Loss):
 
             elif loss_type.find('SSIM') >= 0:
                 from pytorch_msssim import SSIM
-                loss_function = SSIM(win_size=7, win_sigma=1, data_range=args.rgb_range,
-                                     size_average=True, channel=3)
+                loss_function = SSIM(win_size=7, win_sigma=1, data_range=args.rgb_range, size_average=True, channel=3)
             elif loss_type.find('MS-SSIM') >= 0:
                 from pytorch_msssim import MS_SSIM
-                loss_function = 1 - MS_SSIM(win_sigma=1, data_range=args.rgb_range, size_average=True, channel=3)
+                loss_function = MS_SSIM(win_sigma=1, data_range=args.rgb_range, size_average=True, channel=3)
 
             self.loss.append({
                 'type': loss_type,
