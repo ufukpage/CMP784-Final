@@ -32,19 +32,19 @@ class MaskBranch(nn.Module):
         super(MaskBranch, self).__init__()
 
         # MB_RB1 = [common.ResBlockEfficient(conv, n_feat, kernel_size, act=act)]
-        MB_RB1 = [common.ResBlockEfficient(conv, n_feat, kernel_size, act=act, groups=n_feat//4)]
+        MB_RB1 = [common.ResBlockEfficient(conv, n_feat, kernel_size, act=act, groups=n_feat)]
 
         MB_Down = [AttentionLite(n_feat, n_feat, 3, stride=1, padding=1),
                    nn.Conv2d(n_feat, n_feat, 3, stride=2, padding=1)]
 
-        MB_RB2 = [common.ResBlockEfficient(conv, n_feat, kernel_size, act=act, groups=n_feat//4)]
+        MB_RB2 = [common.ResBlockEfficient(conv, n_feat, kernel_size, act=act, groups=n_feat)]
 
         # MB_Up = [nn.ConvTranspose2d(n_feat, n_feat, 6, stride=2, padding=2)]
         MB_Up = [nn.PixelShuffle(2)]
 
         self.Up1x1conv = nn.Conv2d(int(n_feat/4), n_feat, 1, padding=0)
 
-        MB_RB3 = [common.ResBlockEfficient(conv, n_feat, kernel_size, act=act, groups=n_feat//4)]
+        MB_RB3 = [common.ResBlockEfficient(conv, n_feat, kernel_size, act=act, groups=n_feat)]
 
         Att_MB_1x1conv = [nn.Conv2d(n_feat, n_feat, 1, padding=0)]
         MB_sigmoid = [nn.Sigmoid()]
