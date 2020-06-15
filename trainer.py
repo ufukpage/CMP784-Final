@@ -197,7 +197,7 @@ class Trainer:
 
         dataset = self.loader_test[test_dataset_index].dataset
         lr_input, gt, filename = dataset[sample_index]
-        lr_input = lr_input.cuda()
+        lr_input = lr_input.cuda(non_blocking=True)
         lr_input.unsqueeze_(0)
         output = self.model.model(lr_input)
 
