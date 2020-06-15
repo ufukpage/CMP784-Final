@@ -86,7 +86,7 @@ class Trainer:
         epoch = self.optimizer.get_last_epoch()
 
         self.ckp.write_log('\nEvaluation:')
-        # self.ckp.add_log(torch.zeros(1, len(self.loader_test), len(self.scale)))
+        self.ckp.add_log(torch.zeros(1, len(self.loader_test), len(self.scale)))
         self.model.zero_grad()
         self.model.eval()
 
@@ -116,9 +116,9 @@ class Trainer:
                     sr = utility.quantize(sr, self.args.rgb_range)
 
                     save_list = [sr]
-                    #self.ckp.log[-1, idx_data, idx_scale] += utility.calc_psnr(
-                    #    sr, hr, scale, self.args.rgb_range, dataset=d
-                    #)
+                    self.ckp.log[-1, idx_data, idx_scale] += utility.calc_psnr(
+                        sr, hr, scale, self.args.rgb_range, dataset=d
+                    )
 
                     psnr += utility.calc_psnr( sr, hr, scale, self.args.rgb_range, dataset=d)
                     ssim_total += utility.calc_ssim(sr, hr, self.args.rgb_range).item()
@@ -126,10 +126,10 @@ class Trainer:
                     if self.args.save_gt:
                         save_list.extend([lr, hr])
 
-                    #if self.args.save_results:
-                    #    self.ckp.save_results(d, filename[0], save_list, scale)
+                    if self.args.save_results:
+                        self.ckp.save_results(d, filename[0], save_list, scale)
 
-                # self.ckp.log[-1, idx_data, idx_scale] /= len(d)
+                self.ckp.log[-1, idx_data, idx_scale] /= len(d)
                 psnr /= len(d)
                 best = self.ckp.log.max(0)
                 """"

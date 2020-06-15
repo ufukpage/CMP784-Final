@@ -136,8 +136,8 @@ class AugmentedConv(nn.Module):
 
 
 
-
 # https://github.com/20171130/AttentionLite/blob/master/model.py
+
 class Sparse(nn.Module):
     """ #groups independent denses"""
 
