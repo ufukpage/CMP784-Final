@@ -18,6 +18,32 @@ def set_template(args):
         args.n_feats = 64
         args.chop = True
 
+    if args.template.find('EARN_NOASCA') >= 0:
+        args.model = 'EARN_NOASCA'
+        # args.n_resgroups = 10
+        args.n_feats = 64
+        args.chop = True
+
+    if args.template.find('EARN_NOLA') >= 0:
+        args.model = 'EARN_NOLA'
+        # args.n_resgroups = 10
+        args.n_feats = 64
+        args.chop = True
+
+    if args.template.find('EARN_NOSKIP') >= 0:
+        args.model = 'EARN_NOSKIP'
+        # args.n_resgroups = 10
+        args.n_feats = 64
+        args.chop = True
+
+    if args.template.find('SAN') >= 0:
+        args.model = 'SAN'
+        args.n_resblocks = 10
+        args.n_resgroups = 20
+        args.resduction = 16
+        args.n_feats = 64
+        args.chop = True
+
     if args.template.find('EDSR_paper') >= 0:
         args.model = 'EDSR'
         args.n_resblocks = 32
